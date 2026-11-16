@@ -1,0 +1,105 @@
+services:
+  backend1:
+    build: ./backend
+    container_name: backend1
+    environment:
+      - INSTANCE_NAME=Instancia-Backend-1
+    networks:
+      - monitor_net
+
+  backend2:
+    build: ./backend
+    container_name: backend2
+    environment:
+      - INSTANCE_NAME=Instancia-Backend-2
+    networks:
+      - monitor_net
+
+  backend3:
+    build: ./backend
+    container_name: backend3
+    environment:
+      - INSTANCE_NAME=Instancia-Backend-3
+    networks:
+      - monitor_net
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: nginx-proxy
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend1
+      - backend2
+      - backend3
+    networks:
+      - monitor_net
+
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:1.4.2
+    container_name: nginx-exporter
+    command:
+      - "--nginx.scrape-uri=http://nginx:8088/stub_status"
+    depends_on:
+      - nginx
+    networks:
+      - monitor_net
+
+  cadvisor:
+    image: ghcr.io/google/cadvisor:0.56.2
+    container_name: cadvisor
+    privileged: true
+    command:
+      - "--housekeeping_interval=5s"
+      - "--docker_only=true"
+    ports:
+      - "8081:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    networks:
+      - monitor_net
+
+  prometheus:
+    image: prom/prometheus:v3.13.5
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    depends_on:
+      - backend1
+      - backend2
+      - backend3
+      - nginx-exporter
+      - cadvisor
+    networks:
+      - monitor_net
+
+  grafana:
+    image: grafana/grafana:12.4.0
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - monitor_net
+
+networks:
+  monitor_net:
+    driver: bridge
+
+volumes:
+  prometheus_data:
+  grafana_data:
