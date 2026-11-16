@@ -53,7 +53,7 @@ proyecto-final-docker/
 
 1. **Clonar el repositorio e ingresar al directorio:**
    ```bash
-   git clone <URL_DE_TU_REPOSITORIO_GITHUB>
+   git clone https://github.com/carlosarmandovelez-alt/ProyectoFinalDocker---Sistemas-Operativos
    cd proyecto-final-docker
    ```
 
